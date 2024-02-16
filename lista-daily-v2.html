@@ -142,6 +142,7 @@
 
     <script>
       function clearInit() {
+        console.log("clearInit");
         localStorage.removeItem("lastPerson");
         localStorage.removeItem("report");
         document.getElementById("comments").value = "";
@@ -150,6 +151,7 @@
       }
 
       function deletePerson(name) {
+        console.log("deletePerson", name);
         let people = JSON.parse(localStorage.getItem("people")) || [];
         let newPeople = people.filter((person) => person !== name);
         localStorage.setItem("people", JSON.stringify(newPeople));
@@ -158,6 +160,7 @@
 
       function addPerson() {
         const name = document.getElementById("personName").value;
+        console.log("addPerson", name);
         if (name) {
           let people = JSON.parse(localStorage.getItem("people")) || [];
           people.push(name);
@@ -172,6 +175,7 @@
       function renderList(
         people = JSON.parse(localStorage.getItem("people")) || []
       ) {
+        console.log("renderList");
         let listElement = document.getElementById("peopleList");
         listElement.innerHTML = "";
         people.forEach((person) => {
@@ -192,20 +196,25 @@
         });
       }
 
-      function generateRandomList() {
+      function generateRandomList(runNextPerson = true) {
+        console.log("generateRandomList", runNextPerson);
+
         clearInit();
 
         let people = JSON.parse(localStorage.getItem("people")) || [];
         let randomList = people.sort(() => 0.5 - Math.random());
         localStorage.setItem("randomPeople", JSON.stringify(randomList));
 
-        nextPerson();
+        if (runNextPerson) {
+          nextPerson();
+        }
 
         renderList(randomList);
       }
 
       function fillReport() {
         const commentsValue = document.getElementById("comments").value || "";
+        console.log("fillReport", commentsValue);
         const lastPerson = localStorage.getItem("lastPerson");
         if (commentsValue.length > 0 && lastPerson) {
           const text = `${
@@ -221,11 +230,11 @@
 
       function nextPerson() {
         fillReport();
-
         let randomPeople =
           JSON.parse(localStorage.getItem("randomPeople")) || [];
         if (randomPeople.length > 0) {
           let person = randomPeople.shift();
+          console.log("nextPerson", person);
 
           localStorage.setItem("randomPeople", JSON.stringify(randomPeople));
           localStorage.setItem("lastPerson", person);
@@ -243,6 +252,7 @@
           JSON.parse(localStorage.getItem("randomPeople")) || [];
         let lastPerson = localStorage.getItem("lastPerson");
         localStorage.removeItem("lastPerson");
+        console.log("postponePerson", lastPerson);
         if (randomPeople.length > 0 && lastPerson) {
           const finalRandomPeople = randomPeople
             .filter((e) => e !== lastPerson)
@@ -259,6 +269,7 @@
 
       function downloadReport() {
         const report = localStorage.getItem("report") || "";
+        console.log("downloadReport\n", report);
         if (report.length > 0) {
           try {
             let nameFileTmp =
@@ -266,9 +277,7 @@
             const element = document.createElement("a");
             element.setAttribute(
               "href",
-              `data:text/plain;charset=utf-8,Report\n${
-                localStorage.getItem("report") || ""
-              }`
+              `data:text/plain;charset=utf-8,Report\n${report}`
             );
             element.setAttribute("download", nameFileTmp);
             element.style.display = "none";
@@ -284,6 +293,8 @@
       }
 
       function preloadData() {
+        console.log("preloadData");
+
         document.getElementById("currentPerson").innerText =
           localStorage.getItem("lastPerson");
         document.getElementById("report").innerText =
@@ -295,7 +306,7 @@
         .addEventListener("click", addPerson);
       document
         .getElementById("generateRandomListButton")
-        .addEventListener("click", generateRandomList);
+        .addEventListener("click", () => generateRandomList());
       document
         .getElementById("nextPersonButton")
         .addEventListener("click", nextPerson);
@@ -306,8 +317,16 @@
         .getElementById("downloadReport")
         .addEventListener("click", downloadReport);
 
+      ["beforeunload", "pagehide"].forEach((ev) => {
+        window.addEventListener(ev, function (e) {
+          e.preventDefault();
+          e.returnValue = "";
+        });
+      });
+
+      console.log("start js");
       preloadData();
-      generateRandomList();
+      generateRandomList(false);
     </script>
   </body>
 </html>
