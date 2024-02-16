@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Listado de Personas</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+        color: #333;
+        padding: 20px;
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+      }
+
+      .container {
+        width: 98%;
+        max-width: 800px;
+        background-color: #fff;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+      }
+
+      .column {
+        flex: 1;
+        min-width: 200px;
+      }
+
+      h2 {
+        color: #4a54f1;
+      }
+
+      input[type="text"] {
+        padding: 10px;
+        margin-bottom: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      button {
+        background-color: #4a54f1;
+        color: white;
+        padding: 10px 15px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-bottom: 10px;
+      }
+
+      button:hover {
+        background-color: #3a44c1;
+      }
+
+      ul {
+        list-style: none;
+        padding: 0;
+      }
+
+      ul li {
+        margin: 0.5rem auto;
+        padding: 1px;
+        background-color: #eee;
+        border-radius: 4px;
+      }
+
+      .deleteButton {
+        background-color: #f44336;
+        color: white;
+        padding: 5px 10px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-left: 10px;
+      }
+
+      #currentPerson {
+        margin: 1rem auto;
+        font-size: 2rem;
+        font-weight: 700;
+      }
+
+      .personTitle {
+        display: inline-block;
+        width: 100px;
+        margin-left: 0.5rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="column">
+        <h2>Registro</h2>
+
+        <input type="text" id="personName" placeholder="Nombre" />
+
+        <button id="addPersonButton">Agregar</button>
+
+        <hr class="solid" />
+
+        <h2>Listado</h2>
+
+        <ul id="peopleList"></ul>
+      </div>
+      <div class="column">
+        <h2>Acciones</h2>
+
+        <button id="generateRandomListButton">Generar lista</button>
+
+        <hr class="solid" />
+
+        <h2>Selección</h2>
+
+        <div id="currentPerson">-</div>
+
+        <input type="text" id="comments" placeholder="Comentarios" />
+
+        <button id="nextPersonButton">Siguiente</button>
+
+        <button id="postponePersonButton">Postergar</button>
+
+        <hr class="solid" />
+
+        <h2>Reporte:</h2>
+
+        <div id="report">-</div>
+
+        <br />
+
+        <button id="downloadReport">Descargar</button>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        function clearInit() {
+          localStorage.removeItem("lastPerson");
+          localStorage.removeItem("report");
+          document.getElementById("comments").value = "";
+          document.getElementById("report").innerText = "";
+          document.getElementById("currentPerson").innerText = "-";
+        }
+
+        function deletePerson(name) {
+          let people = JSON.parse(localStorage.getItem("people")) || [];
+          let newPeople = people.filter((person) => person !== name);
+          localStorage.setItem("people", JSON.stringify(newPeople));
+          renderList();
+        }
+
+        function addPerson() {
+          const name = document.getElementById("personName").value;
+          if (name) {
+            let people = JSON.parse(localStorage.getItem("people")) || [];
+            people.push(name);
+            localStorage.setItem("people", JSON.stringify(people));
+            document.getElementById("personName").value = "";
+            renderList();
+          } else {
+            alert("Por favor, ingresa un nombre.");
+          }
+        }
+
+        function renderList(
+          people = JSON.parse(localStorage.getItem("people")) || []
+        ) {
+          let listElement = document.getElementById("peopleList");
+          listElement.innerHTML = "";
+          people.forEach((person) => {
+            let listItem = document.createElement("li");
+
+            let personTitle = document.createElement("p");
+            personTitle.innerText = `${person}`;
+            personTitle.className = "personTitle";
+
+            let deleteBtn = document.createElement("button");
+            deleteBtn.innerText = "Borrar";
+            deleteBtn.className = "deleteButton";
+            deleteBtn.onclick = () => deletePerson(person);
+
+            listItem.appendChild(personTitle);
+            listItem.appendChild(deleteBtn);
+            listElement.appendChild(listItem);
+          });
+        }
+
+        function generateRandomList() {
+          clearInit();
+
+          let people = JSON.parse(localStorage.getItem("people")) || [];
+          let randomList = people.sort(() => 0.5 - Math.random());
+          localStorage.setItem("randomPeople", JSON.stringify(randomList));
+
+          nextPerson();
+
+          renderList(randomList);
+        }
+
+        function fillReport() {
+          const commentsValue = document.getElementById("comments").value || "";
+          const lastPerson = localStorage.getItem("lastPerson");
+          if (commentsValue.length > 0 && lastPerson) {
+            const text = `${
+              localStorage.getItem("report") || ""
+            }\n${localStorage.getItem(
+              "lastPerson"
+            )} => ${commentsValue}`.trim();
+            localStorage.setItem("report", text);
+            document.getElementById("report").innerHTML = text.replace(
+              /\n/g,
+              "<br>"
+            );
+          }
+        }
+
+        function nextPerson() {
+          fillReport();
+
+          let randomPeople =
+            JSON.parse(localStorage.getItem("randomPeople")) || [];
+          if (randomPeople.length > 0) {
+            let person = randomPeople.shift();
+
+            localStorage.setItem("randomPeople", JSON.stringify(randomPeople));
+            localStorage.setItem("lastPerson", person);
+
+            document.getElementById("comments").value = "";
+            document.getElementById("currentPerson").innerText = person;
+          } else {
+            alert("No hay más registros en lista aleatoria.");
+            document.getElementById("currentPerson").innerText = "-";
+          }
+        }
+
+        function postponePerson() {
+          let randomPeople =
+            JSON.parse(localStorage.getItem("randomPeople")) || [];
+          let lastPerson = localStorage.getItem("lastPerson");
+          localStorage.removeItem("lastPerson");
+          if (randomPeople.length > 0 && lastPerson) {
+            const finalRandomPeople = randomPeople
+              .filter((e) => e !== lastPerson)
+              .concat(lastPerson + "*");
+            localStorage.setItem(
+              "randomPeople",
+              JSON.stringify(finalRandomPeople)
+            );
+            nextPerson();
+          } else {
+            alert("Nada que postergar");
+          }
+        }
+
+        function downloadReport() {
+          const report = localStorage.getItem("report") || "";
+          if (report.length > 0) {
+            try {
+              let nameFileTmp =
+                "daily" + new Date().toJSON().replace(/[:.-]/g, "");
+              const element = document.createElement("a");
+              element.setAttribute(
+                "href",
+                `data:text/plain;charset=utf-8,Report\n${
+                  localStorage.getItem("report") || ""
+                }`
+              );
+              element.setAttribute("download", nameFileTmp);
+              element.style.display = "none";
+              document.body.appendChild(element);
+              element.click();
+              document.body.removeChild(element);
+            } catch (e) {
+              console.log(e);
+            }
+          } else {
+            alert("Nada que reportar");
+          }
+        }
+
+        function preloadData() {
+          document.getElementById("currentPerson").innerText =
+            localStorage.getItem("lastPerson");
+          document.getElementById("report").innerText =
+            localStorage.getItem("report");
+        }
+
+        document
+          .getElementById("addPersonButton")
+          .addEventListener("click", addPerson);
+        document
+          .getElementById("generateRandomListButton")
+          .addEventListener("click", generateRandomList);
+        document
+          .getElementById("nextPersonButton")
+          .addEventListener("click", nextPerson);
+        document
+          .getElementById("postponePersonButton")
+          .addEventListener("click", postponePerson);
+        document
+          .getElementById("downloadReport")
+          .addEventListener("click", downloadReport);
+
+        preloadData();
+        generateRandomList();
+      });
+    </script>
+  </body>
+</html>
