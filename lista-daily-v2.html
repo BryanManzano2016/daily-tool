@@ -141,177 +141,173 @@
     </div>
 
     <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        function clearInit() {
-          localStorage.removeItem("lastPerson");
-          localStorage.removeItem("report");
+      function clearInit() {
+        localStorage.removeItem("lastPerson");
+        localStorage.removeItem("report");
+        document.getElementById("comments").value = "";
+        document.getElementById("report").innerText = "";
+        document.getElementById("currentPerson").innerText = "-";
+      }
+
+      function deletePerson(name) {
+        let people = JSON.parse(localStorage.getItem("people")) || [];
+        let newPeople = people.filter((person) => person !== name);
+        localStorage.setItem("people", JSON.stringify(newPeople));
+        renderList();
+      }
+
+      function addPerson() {
+        const name = document.getElementById("personName").value;
+        if (name) {
+          let people = JSON.parse(localStorage.getItem("people")) || [];
+          people.push(name);
+          localStorage.setItem("people", JSON.stringify(people));
+          document.getElementById("personName").value = "";
+          renderList();
+        } else {
+          alert("Por favor, ingresa un nombre.");
+        }
+      }
+
+      function renderList(
+        people = JSON.parse(localStorage.getItem("people")) || []
+      ) {
+        let listElement = document.getElementById("peopleList");
+        listElement.innerHTML = "";
+        people.forEach((person) => {
+          let listItem = document.createElement("li");
+
+          let personTitle = document.createElement("p");
+          personTitle.innerText = `${person}`;
+          personTitle.className = "personTitle";
+
+          let deleteBtn = document.createElement("button");
+          deleteBtn.innerText = "Borrar";
+          deleteBtn.className = "deleteButton";
+          deleteBtn.onclick = () => deletePerson(person);
+
+          listItem.appendChild(personTitle);
+          listItem.appendChild(deleteBtn);
+          listElement.appendChild(listItem);
+        });
+      }
+
+      function generateRandomList() {
+        clearInit();
+
+        let people = JSON.parse(localStorage.getItem("people")) || [];
+        let randomList = people.sort(() => 0.5 - Math.random());
+        localStorage.setItem("randomPeople", JSON.stringify(randomList));
+
+        nextPerson();
+
+        renderList(randomList);
+      }
+
+      function fillReport() {
+        const commentsValue = document.getElementById("comments").value || "";
+        const lastPerson = localStorage.getItem("lastPerson");
+        if (commentsValue.length > 0 && lastPerson) {
+          const text = `${
+            localStorage.getItem("report") || ""
+          }\n${localStorage.getItem("lastPerson")} => ${commentsValue}`.trim();
+          localStorage.setItem("report", text);
+          document.getElementById("report").innerHTML = text.replace(
+            /\n/g,
+            "<br>"
+          );
+        }
+      }
+
+      function nextPerson() {
+        fillReport();
+
+        let randomPeople =
+          JSON.parse(localStorage.getItem("randomPeople")) || [];
+        if (randomPeople.length > 0) {
+          let person = randomPeople.shift();
+
+          localStorage.setItem("randomPeople", JSON.stringify(randomPeople));
+          localStorage.setItem("lastPerson", person);
+
           document.getElementById("comments").value = "";
-          document.getElementById("report").innerText = "";
+          document.getElementById("currentPerson").innerText = person;
+        } else {
+          alert("No hay más registros en lista aleatoria.");
           document.getElementById("currentPerson").innerText = "-";
         }
+      }
 
-        function deletePerson(name) {
-          let people = JSON.parse(localStorage.getItem("people")) || [];
-          let newPeople = people.filter((person) => person !== name);
-          localStorage.setItem("people", JSON.stringify(newPeople));
-          renderList();
-        }
-
-        function addPerson() {
-          const name = document.getElementById("personName").value;
-          if (name) {
-            let people = JSON.parse(localStorage.getItem("people")) || [];
-            people.push(name);
-            localStorage.setItem("people", JSON.stringify(people));
-            document.getElementById("personName").value = "";
-            renderList();
-          } else {
-            alert("Por favor, ingresa un nombre.");
-          }
-        }
-
-        function renderList(
-          people = JSON.parse(localStorage.getItem("people")) || []
-        ) {
-          let listElement = document.getElementById("peopleList");
-          listElement.innerHTML = "";
-          people.forEach((person) => {
-            let listItem = document.createElement("li");
-
-            let personTitle = document.createElement("p");
-            personTitle.innerText = `${person}`;
-            personTitle.className = "personTitle";
-
-            let deleteBtn = document.createElement("button");
-            deleteBtn.innerText = "Borrar";
-            deleteBtn.className = "deleteButton";
-            deleteBtn.onclick = () => deletePerson(person);
-
-            listItem.appendChild(personTitle);
-            listItem.appendChild(deleteBtn);
-            listElement.appendChild(listItem);
-          });
-        }
-
-        function generateRandomList() {
-          clearInit();
-
-          let people = JSON.parse(localStorage.getItem("people")) || [];
-          let randomList = people.sort(() => 0.5 - Math.random());
-          localStorage.setItem("randomPeople", JSON.stringify(randomList));
-
+      function postponePerson() {
+        let randomPeople =
+          JSON.parse(localStorage.getItem("randomPeople")) || [];
+        let lastPerson = localStorage.getItem("lastPerson");
+        localStorage.removeItem("lastPerson");
+        if (randomPeople.length > 0 && lastPerson) {
+          const finalRandomPeople = randomPeople
+            .filter((e) => e !== lastPerson)
+            .concat(lastPerson + "*");
+          localStorage.setItem(
+            "randomPeople",
+            JSON.stringify(finalRandomPeople)
+          );
           nextPerson();
-
-          renderList(randomList);
+        } else {
+          alert("Nada que postergar");
         }
+      }
 
-        function fillReport() {
-          const commentsValue = document.getElementById("comments").value || "";
-          const lastPerson = localStorage.getItem("lastPerson");
-          if (commentsValue.length > 0 && lastPerson) {
-            const text = `${
-              localStorage.getItem("report") || ""
-            }\n${localStorage.getItem(
-              "lastPerson"
-            )} => ${commentsValue}`.trim();
-            localStorage.setItem("report", text);
-            document.getElementById("report").innerHTML = text.replace(
-              /\n/g,
-              "<br>"
+      function downloadReport() {
+        const report = localStorage.getItem("report") || "";
+        if (report.length > 0) {
+          try {
+            let nameFileTmp =
+              "daily" + new Date().toJSON().replace(/[:.-]/g, "");
+            const element = document.createElement("a");
+            element.setAttribute(
+              "href",
+              `data:text/plain;charset=utf-8,Report\n${
+                localStorage.getItem("report") || ""
+              }`
             );
+            element.setAttribute("download", nameFileTmp);
+            element.style.display = "none";
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+          } catch (e) {
+            console.log(e);
           }
+        } else {
+          alert("Nada que reportar");
         }
+      }
 
-        function nextPerson() {
-          fillReport();
+      function preloadData() {
+        document.getElementById("currentPerson").innerText =
+          localStorage.getItem("lastPerson");
+        document.getElementById("report").innerText =
+          localStorage.getItem("report");
+      }
 
-          let randomPeople =
-            JSON.parse(localStorage.getItem("randomPeople")) || [];
-          if (randomPeople.length > 0) {
-            let person = randomPeople.shift();
+      document
+        .getElementById("addPersonButton")
+        .addEventListener("click", addPerson);
+      document
+        .getElementById("generateRandomListButton")
+        .addEventListener("click", generateRandomList);
+      document
+        .getElementById("nextPersonButton")
+        .addEventListener("click", nextPerson);
+      document
+        .getElementById("postponePersonButton")
+        .addEventListener("click", postponePerson);
+      document
+        .getElementById("downloadReport")
+        .addEventListener("click", downloadReport);
 
-            localStorage.setItem("randomPeople", JSON.stringify(randomPeople));
-            localStorage.setItem("lastPerson", person);
-
-            document.getElementById("comments").value = "";
-            document.getElementById("currentPerson").innerText = person;
-          } else {
-            alert("No hay más registros en lista aleatoria.");
-            document.getElementById("currentPerson").innerText = "-";
-          }
-        }
-
-        function postponePerson() {
-          let randomPeople =
-            JSON.parse(localStorage.getItem("randomPeople")) || [];
-          let lastPerson = localStorage.getItem("lastPerson");
-          localStorage.removeItem("lastPerson");
-          if (randomPeople.length > 0 && lastPerson) {
-            const finalRandomPeople = randomPeople
-              .filter((e) => e !== lastPerson)
-              .concat(lastPerson + "*");
-            localStorage.setItem(
-              "randomPeople",
-              JSON.stringify(finalRandomPeople)
-            );
-            nextPerson();
-          } else {
-            alert("Nada que postergar");
-          }
-        }
-
-        function downloadReport() {
-          const report = localStorage.getItem("report") || "";
-          if (report.length > 0) {
-            try {
-              let nameFileTmp =
-                "daily" + new Date().toJSON().replace(/[:.-]/g, "");
-              const element = document.createElement("a");
-              element.setAttribute(
-                "href",
-                `data:text/plain;charset=utf-8,Report\n${
-                  localStorage.getItem("report") || ""
-                }`
-              );
-              element.setAttribute("download", nameFileTmp);
-              element.style.display = "none";
-              document.body.appendChild(element);
-              element.click();
-              document.body.removeChild(element);
-            } catch (e) {
-              console.log(e);
-            }
-          } else {
-            alert("Nada que reportar");
-          }
-        }
-
-        function preloadData() {
-          document.getElementById("currentPerson").innerText =
-            localStorage.getItem("lastPerson");
-          document.getElementById("report").innerText =
-            localStorage.getItem("report");
-        }
-
-        document
-          .getElementById("addPersonButton")
-          .addEventListener("click", addPerson);
-        document
-          .getElementById("generateRandomListButton")
-          .addEventListener("click", generateRandomList);
-        document
-          .getElementById("nextPersonButton")
-          .addEventListener("click", nextPerson);
-        document
-          .getElementById("postponePersonButton")
-          .addEventListener("click", postponePerson);
-        document
-          .getElementById("downloadReport")
-          .addEventListener("click", downloadReport);
-
-        preloadData();
-        generateRandomList();
-      });
+      preloadData();
+      generateRandomList();
     </script>
   </body>
 </html>
