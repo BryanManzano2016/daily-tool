@@ -14,12 +14,11 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        min-height: 100vh;
       }
 
       .container {
         width: 98%;
-        max-width: 800px;
+        max-width: 980px;
         background-color: #fff;
         border-radius: 8px;
         padding: 20px;
@@ -27,6 +26,7 @@
         display: flex;
         flex-wrap: wrap;
         gap: 20px;
+        font-size: 1.5rem;
       }
 
       .column {
@@ -45,6 +45,7 @@
         border-radius: 4px;
         width: 100%;
         box-sizing: border-box;
+        font-size: 1.5rem;
       }
 
       button {
@@ -55,6 +56,7 @@
         border-radius: 4px;
         cursor: pointer;
         margin-bottom: 10px;
+        font-size: 1.5rem;
       }
 
       button:hover {
@@ -67,35 +69,37 @@
       }
 
       ul li {
-        margin: 0.5rem auto;
-        padding: 1px;
-        background-color: #eee;
         border-radius: 4px;
       }
 
-      .deleteButton {
+      .secondaryButton {
         background-color: #f44336;
         color: white;
-        padding: 5px 10px;
         border: none;
         border-radius: 4px;
         cursor: pointer;
-        margin-left: 10px;
+        font-size: 1.5rem;
       }
 
       #currentPerson {
         margin: 1rem auto;
-        font-size: 2rem;
+        font-size: 3rem;
         font-weight: 700;
       }
 
       .personTitle {
         display: inline-block;
-        width: 100px;
-        margin-left: 0.5rem;
+        width: 140px;
+        margin-right: 2rem;
+      }
+
+      #valuesHelp {
+        font-size: 10px;
+        word-break: break-all;
       }
     </style>
   </head>
+
   <body>
     <div class="container">
       <div class="column">
@@ -110,6 +114,8 @@
         <h2>Listado</h2>
 
         <ul id="peopleList"></ul>
+
+        <p id="valuesHelp"></p>
       </div>
       <div class="column">
         <h2>Acciones</h2>
@@ -124,9 +130,15 @@
 
         <input type="text" id="comments" placeholder="Comentarios" />
 
-        <button id="nextPersonButton">Siguiente</button>
-
-        <button id="postponePersonButton">Postergar</button>
+        <div>
+          <div class="column">
+            <button id="prevPersonButton">Atras</button>
+            <button id="nextPersonButton">Siguiente</button>
+            <button class="secondaryButton" id="postponePersonButton">
+              Postergar
+            </button>
+          </div>
+        </div>
 
         <hr class="solid" />
 
@@ -141,17 +153,28 @@
     </div>
 
     <script>
-      function clearInit() {
-        console.log("clearInit");
-        localStorage.removeItem("lastPerson");
-        localStorage.removeItem("report");
+      var actualIndex = 0;
+      var randomPeople = [];
+      var report = new Map();
+
+      function noHasValue(value) {
+        return value === undefined || value === null;
+      }
+
+      function clearInputs() {
+        document.getElementById("currentPerson").innerText = "--";
+        document.getElementById("report").innerText = "--";
         document.getElementById("comments").value = "";
-        document.getElementById("report").innerText = "";
-        document.getElementById("currentPerson").innerText = "-";
+      }
+
+      function clearInit() {
+        actualIndex = 0;
+        report = new Map();
+        randomPeople = [];
+        clearInputs();
       }
 
       function deletePerson(name) {
-        console.log("deletePerson", name);
         let people = JSON.parse(localStorage.getItem("people")) || [];
         let newPeople = people.filter((person) => person !== name);
         localStorage.setItem("people", JSON.stringify(newPeople));
@@ -160,7 +183,6 @@
 
       function addPerson() {
         const name = document.getElementById("personName").value;
-        console.log("addPerson", name);
         if (name) {
           let people = JSON.parse(localStorage.getItem("people")) || [];
           people.push(name);
@@ -175,7 +197,6 @@
       function renderList(
         people = JSON.parse(localStorage.getItem("people")) || []
       ) {
-        console.log("renderList");
         let listElement = document.getElementById("peopleList");
         listElement.innerHTML = "";
         people.forEach((person) => {
@@ -187,7 +208,7 @@
 
           let deleteBtn = document.createElement("button");
           deleteBtn.innerText = "Borrar";
-          deleteBtn.className = "deleteButton";
+          deleteBtn.className = "secondaryButton";
           deleteBtn.onclick = () => deletePerson(person);
 
           listItem.appendChild(personTitle);
@@ -196,88 +217,109 @@
         });
       }
 
-      function generateRandomList(runNextPerson = true) {
-        console.log("generateRandomList", runNextPerson);
-
+      function generateRandomList() {
         clearInit();
 
         let people = JSON.parse(localStorage.getItem("people")) || [];
-        let randomList = people.sort(() => 0.5 - Math.random());
-        localStorage.setItem("randomPeople", JSON.stringify(randomList));
+        randomPeople = people.sort(() => 0.5 - Math.random());
 
-        if (runNextPerson) {
-          nextPerson();
-        }
+        renderList(randomPeople);
 
-        renderList(randomList);
+        document.getElementById(
+          "valuesHelp"
+        ).innerHTML = `localStorage.setItem('people', '${localStorage.getItem(
+          "people"
+        )}')`;
       }
 
-      function fillReport() {
+      function getStateList() {
+        return {
+          prevPersonIndex: actualIndex - 1,
+          nextPersonIndex: actualIndex + 1,
+        };
+      }
+
+      function getReportText(isHtml = false) {
+        let textReport = "";
+        report.forEach((value, key) => {
+          textReport += `${value}\n`;
+        });
+        return isHtml ? textReport.replace(/\n/g, "<br>") : textReport;
+      }
+
+      function fillReportHtml() {
+        const { prevPersonIndex } = getStateList();
         const commentsValue = document.getElementById("comments").value || "";
-        console.log("fillReport", commentsValue);
-        const lastPerson = localStorage.getItem("lastPerson");
-        if (commentsValue.length > 0 && lastPerson) {
-          const text = `${
-            localStorage.getItem("report") || ""
-          }\n${localStorage.getItem("lastPerson")} => ${commentsValue}`.trim();
-          localStorage.setItem("report", text);
-          document.getElementById("report").innerHTML = text.replace(
-            /\n/g,
-            "<br>"
+        const actualPerson = randomPeople[prevPersonIndex];
+        if (commentsValue.length > 0 && actualPerson) {
+          report.set(
+            actualPerson,
+            `${
+              new Date().toLocaleTimeString().split(" ")[0]
+            } ${actualPerson} => ${commentsValue}`
           );
+          document.getElementById("report").innerHTML = getReportText(true);
+        }
+      }
+
+      function prevPerson() {
+        const { lastPosition, prevPersonIndex } = getStateList();
+
+        if (randomPeople.length > 0 && prevPersonIndex > 0) {
+          let prevPerson = randomPeople[prevPersonIndex - 1];
+
+          actualIndex = prevPersonIndex;
+
+          document.getElementById("comments").value = "";
+          document.getElementById("currentPerson").innerText = prevPerson;
+        } else {
+          alert("No hay mas personas atras");
         }
       }
 
       function nextPerson() {
-        fillReport();
-        let randomPeople =
-          JSON.parse(localStorage.getItem("randomPeople")) || [];
-        if (randomPeople.length > 0) {
-          let person = randomPeople.shift();
-          console.log("nextPerson", person);
+        fillReportHtml();
+        const { nextPersonIndex } = getStateList();
 
-          localStorage.setItem("randomPeople", JSON.stringify(randomPeople));
-          localStorage.setItem("lastPerson", person);
+        if (randomPeople.length > 0 && actualIndex < randomPeople.length) {
+          let nextPerson = randomPeople[actualIndex];
+          const newNextPersonIndex = nextPersonIndex;
+
+          actualIndex = newNextPersonIndex;
 
           document.getElementById("comments").value = "";
-          document.getElementById("currentPerson").innerText = person;
+          document.getElementById("currentPerson").innerText = nextPerson;
         } else {
           alert("No hay más registros en lista aleatoria.");
-          document.getElementById("currentPerson").innerText = "-";
         }
       }
 
       function postponePerson() {
-        let randomPeople =
-          JSON.parse(localStorage.getItem("randomPeople")) || [];
-        let lastPerson = localStorage.getItem("lastPerson");
-        localStorage.removeItem("lastPerson");
-        console.log("postponePerson", lastPerson);
-        if (randomPeople.length > 0 && lastPerson) {
-          const finalRandomPeople = randomPeople
-            .filter((e) => e !== lastPerson)
-            .concat(lastPerson + "*");
-          localStorage.setItem(
-            "randomPeople",
-            JSON.stringify(finalRandomPeople)
-          );
-          nextPerson();
+        const { nextPersonIndex, prevPersonIndex } = getStateList();
+
+        if (randomPeople.length > 0 && actualIndex < randomPeople.length) {
+          const actualPersonIndex = prevPersonIndex;
+          let actualPerson = randomPeople[actualPersonIndex];
+          randomPeople.splice(actualPersonIndex, 1);
+          randomPeople.push(actualPerson);
+
+          document.getElementById("comments").value = "";
+          document.getElementById("currentPerson").innerText =
+            randomPeople[prevPersonIndex];
         } else {
           alert("Nada que postergar");
         }
       }
 
       function downloadReport() {
-        const report = localStorage.getItem("report") || "";
-        console.log("downloadReport\n", report);
-        if (report.length > 0) {
+        if (report.size > 0) {
           try {
             let nameFileTmp =
               "daily" + new Date().toJSON().replace(/[:.-]/g, "");
             const element = document.createElement("a");
             element.setAttribute(
               "href",
-              `data:text/plain;charset=utf-8,Report\n${report}`
+              `data:text/plain;charset=utf-8,Report\n${getReportText()}`
             );
             element.setAttribute("download", nameFileTmp);
             element.style.display = "none";
@@ -292,21 +334,15 @@
         }
       }
 
-      function preloadData() {
-        console.log("preloadData");
-
-        document.getElementById("currentPerson").innerText =
-          localStorage.getItem("lastPerson");
-        document.getElementById("report").innerText =
-          localStorage.getItem("report");
-      }
-
       document
         .getElementById("addPersonButton")
         .addEventListener("click", addPerson);
       document
         .getElementById("generateRandomListButton")
         .addEventListener("click", () => generateRandomList());
+      document
+        .getElementById("prevPersonButton")
+        .addEventListener("click", prevPerson);
       document
         .getElementById("nextPersonButton")
         .addEventListener("click", nextPerson);
@@ -324,9 +360,8 @@
         });
       });
 
-      console.log("start js");
-      preloadData();
-      generateRandomList(false);
+      generateRandomList();
+      nextPerson();
     </script>
   </body>
 </html>
